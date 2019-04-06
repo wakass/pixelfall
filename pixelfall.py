@@ -73,7 +73,8 @@ pal_byteready = np.apply_along_axis(lambda z: reduce(lambda x,y: (y + (x<<2)),z)
 
 def main(file,output_path='./'):
     im = Image.open(file)
-    base,ext = path.splitext(file)
+    base = path.basename(file)
+    base,ext = path.splitext(base)
 
     #From 0,1,2,3 (regular gb color codes, encoded in 2bit)
     #we can get through frame over frame averaging: 7 colors
