@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+
+__author__ = 'Chris WakA'
+__version__ = '1.0'
+__copyright__ = 'Copyright 2018 by Chris WakA'
+__license__ = 'MIT'
+
+import argparse
 import sys
 from os import path
 import ipdb
@@ -292,4 +299,10 @@ DB {tile_data:s}
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    app_name = 'Pixelfall v{version} - Game Boy TileMaker and sequencer by {author}.'.format(version=__version__, author=__author__)
+    parser = argparse.ArgumentParser(description=app_name)
+    parser.add_argument('file_path', help='Gif file to process')
+
+    args = parser.parse_args()
+
+    main(args.file_path)
