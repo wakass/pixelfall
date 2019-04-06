@@ -32,43 +32,16 @@ pal = np.array( [
 [[0, 1, 0, 3],
  [3, 2, 3, 1]]
 ])
-pal = np.flipud(pal)
+pal = np.flipud(pal) #assumes color cycle will be read out back to front.
 
 pal = pal.reshape(10,4)
 
-# pal = np.array([
-#     [0, 3, 2, 3],
-# [0, 1, 0, 3],
-# [3, 0, 1, 1],
-# [0, 2, 2, 3],
-# [2, 1, 3, 0],
-# [2, 2, 0, 0],
-# [2, 3, 2, 0],
-# [2, 1, 2, 0],
-# [0, 1, 1, 3],
-# [2, 2, 3, 0]
-# ])
+pal = np.fliplr(pal) #msb and order of palette is reversed
 
-pal = np.fliplr(pal)
 #switch around 0..3, to 3..0, because gb palette is darkest 3, lightest 0
 reverse_map = np.array([[3,2,1,0]])
 pal = reverse_map[np.arange(reverse_map.shape[0])[:,None],pal]
 pal_byteready = np.apply_along_axis(lambda z: reduce(lambda x,y: (y + (x<<2)),z),1,pal).astype('uint8')
-
-
-# x: [1 0 2 1 3]
-# y: [0 2 1 3 2]
-# pal: [[[0 1 0 3]
-#   [0 3 2 3]]
-
-#  [[0 1 1 3]
-#   [0 2 2 3]]
-
-#  [[0 1 2 3]
-#   [0 1 2 3]]
-
-#  [[0 1 3 3]
-#   [0 0 2 3]]]
 
 
 def main(file,output_path='./'):
@@ -126,10 +99,6 @@ def main(file,output_path='./'):
         x = np.array([[0, 0, 2, 1, 3, 2, 3]])
         y = np.array([[0, 1, 0, 2, 1, 3, 3]])
 
-#         idx = np.where(im >= 3)
-#         im_low = np.zeros(len(im))
-#         im_low[idx] = 3
-#         im_high = im - im_low
         im_low = x[np.arange(x.shape[0])[:,None], im]
         im_high = y[np.arange(y.shape[0])[:,None], im]
 
@@ -147,9 +116,6 @@ def main(file,output_path='./'):
 
     im_low,im_high= split_lohi(im_gb)
 
-    # im_low = im_low.quantize(colors=4,dither=0)
-    #im_high = im_high.quantize(colors=4,dither=0)
-    # im_low.putpalette(neogb_palette)
     if DEBUG:
         im_low.save(output_path + base + '_lo.gif')
         im_high.save(output_path + base +'_hi.gif')
