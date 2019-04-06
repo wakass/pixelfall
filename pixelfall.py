@@ -71,7 +71,7 @@ pal_byteready = np.apply_along_axis(lambda z: reduce(lambda x,y: (y + (x<<2)),z)
 #   [0 0 2 3]]]
 
 
-def main(file):
+def main(file,output_path='./'):
     im = Image.open(file)
     base,ext = path.splitext(file)
 
@@ -110,7 +110,7 @@ def main(file):
     # im_gb.putpalette(neogb_palette)
     # im_gb.im.putpalette(*im_gb.palette.getdata())
     if DEBUG:
-        im_gb.save('./base_interm.gif')
+        im_gb.save(output_path + 'base_interm.gif')
 
     def split_lohi(img):
         im = np.frombuffer(img.tobytes(),dtype='uint8')
@@ -150,8 +150,8 @@ def main(file):
     #im_high = im_high.quantize(colors=4,dither=0)
     # im_low.putpalette(neogb_palette)
     if DEBUG:
-        im_low.save(base + '_lo.gif')
-        im_high.save(base +'_hi.gif')
+        im_low.save(output_path + base + '_lo.gif')
+        im_high.save(output_path + base +'_hi.gif')
 
 #each tile 8x8 pixels: 64 pixel
 #2 bytes per row, i.e. 16 bits, 2 bit per pixel
@@ -243,7 +243,7 @@ DB {tile_data:s}
     palette_data_string= pal_byteready.tobytes().hex()
     palette_data_string= '$' + ',$'.join(wrap(palette_data_string,2))
     
-    with open(base+'.inc','w') as f:
+    with open(output_path + base + '.inc','w') as f:
         tile_data_string= tile_data.astype('uint8').tobytes().hex()
         tile_data_string= '$' + ',$'.join(wrap(tile_data_string,2))
         
@@ -271,7 +271,7 @@ DB {tile_data:s}
     tile_data, map_data = format_gb(im_high)
     tile_len_total += len(tile_data)
 
-    with open(base+'.inc','a') as f:
+    with open(output_path + base +'.inc','a') as f:
         tile_data_string= tile_data.astype('uint8').tobytes().hex()
         tile_data_string= '$' + ',$'.join(wrap(tile_data_string,2))
 
@@ -302,7 +302,9 @@ if __name__ == "__main__":
     app_name = 'Pixelfall v{version} - Game Boy TileMaker and sequencer by {author}.'.format(version=__version__, author=__author__)
     parser = argparse.ArgumentParser(description=app_name)
     parser.add_argument('file_path', help='Gif file to process')
+    parser.add_argument('--output_path', help='Output path',type=str, default='./')
+    parser.add_argument('--debug', help='Enable debug output', action='store_true')
 
     args = parser.parse_args()
 
-    main(args.file_path)
+    main(args.file_path,args.output_path)
