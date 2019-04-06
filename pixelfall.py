@@ -307,4 +307,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    if (args.debug):
+        DEBUG = True
+
     main(args.file_path,args.output_path)
