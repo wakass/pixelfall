@@ -16,7 +16,13 @@ from functools import reduce
 
 DEBUG=False
 
-pal = np.array( [
+
+pal_modes = {
+#color cycle array for sequence 1,2,3,4,5
+    'cycle' :
+    {'x': np.array([[0, 0, 2, 1, 3, 2, 3]]),  #for 1,2,3,4,5 but pad for index 0, and index 6, to map to value 0,6 respectively
+     'y': np.array([[0, 1, 0, 2, 1, 3, 3]]),
+    'pal': np.array( [
 [[0, 0, 2, 3],
  [0, 1, 3, 3]],
     
@@ -32,19 +38,26 @@ pal = np.array( [
 [[0, 1, 0, 3],
  [3, 2, 3, 1]]
 ])
-pal = np.flipud(pal) #assumes color cycle will be read out back to front.
+    },
+    'extend': {
+    'x':np.array([[0, 0, 0, 0, 3, 3, 3]]),
+    'y':np.array([[0, 1, 2, 3, 1, 2, 3]]),
+    'pal': np.array([  [[0, 0, 0, 3], [0, 1, 2, 3]]  ])
+    }
+}
 
-pal = pal.reshape(10,4)
+def make_pal_byteready(pal):
+    pal = np.flipud(pal) #assumes color cycle will be read out back to front.
+    pal = pal.reshape(-1,4)
+    pal = np.fliplr(pal) #msb and order of palette is reversed
+    reverse_map = np.array([[3,2,1,0]]) #switch around 0..3, to 3..0, because gb palette is darkest 3, lightest 0
+    pal = reverse_map[np.arange(reverse_map.shape[0])[:,None],pal]
+    
+    pal_byteready = np.apply_along_axis(lambda z: reduce(lambda x,y: (y + (x<<2)),z),1,pal).astype('uint8')
+    return pal_byteready
 
-pal = np.fliplr(pal) #msb and order of palette is reversed
 
-#switch around 0..3, to 3..0, because gb palette is darkest 3, lightest 0
-reverse_map = np.array([[3,2,1,0]])
-pal = reverse_map[np.arange(reverse_map.shape[0])[:,None],pal]
-pal_byteready = np.apply_along_axis(lambda z: reduce(lambda x,y: (y + (x<<2)),z),1,pal).astype('uint8')
-
-
-def main(file,output_path='./'):
+def main(file,output_path='./',pal_mode='cycle'):
     im = Image.open(file)
     base = path.basename(file)
     base,ext = path.splitext(base)
@@ -79,26 +92,21 @@ def main(file,output_path='./'):
     im_pal.im.putpalette(*im_pal.palette.getdata())
 
     im_gb = im.convert(mode='RGB')
-    im_gb = im_gb.quantize(colors=7,dither=False,palette=im_pal)
+    im_gb = im_gb.quantize(colors=7,method=3,dither=False,palette=im_pal)
     im_gb.info['transparency'] = 0
     # im_gb.putpalette(neogb_palette)
     # im_gb.im.putpalette(*im_gb.palette.getdata())
     if DEBUG:
         im_gb.save(output_path + 'base_interm.gif')
 
-    def split_lohi(img):
+    def split_lohi(img,x,y):
         im = np.frombuffer(img.tobytes(),dtype='uint8')
 
-        #according to my experiements in palette permutations [ref. #notpublished] (see above)
-        #the following [1,2,3,4,5] discombobulates nicely into:
+
+        #according to experiments in palette permutations [ref. #notpublished] (see above)
+        #e.g. the following [1,2,3,4,5] discombobulates nicely into:
         # x: [0 2 1 3 2]
         # y: [1 0 2 1 3] 
-        
-        #with palettes above, but pad for index 0, and index 6, to map to value 0,6
-        
-        x = np.array([[0, 0, 2, 1, 3, 2, 3]])
-        y = np.array([[0, 1, 0, 2, 1, 3, 3]])
-
         im_low = x[np.arange(x.shape[0])[:,None], im]
         im_high = y[np.arange(y.shape[0])[:,None], im]
 
@@ -114,16 +122,15 @@ def main(file,output_path='./'):
         im_hight.frombytes(im_high.tobytes())
         return im_lowt,im_hight
 
-    im_low,im_high= split_lohi(im_gb)
+    pal = pal_modes[pal_mode]
+    im_low,im_high= split_lohi(im_gb, pal['x'],pal['y'])
+    pal_byteready = make_pal_byteready(pal['pal'])
 
     if DEBUG:
         im_low.save(output_path + base + '_lo.gif')
         im_high.save(output_path + base +'_hi.gif')
 
-#each tile 8x8 pixels: 64 pixel
-#2 bytes per row, i.e. 16 bits, 2 bit per pixel
-#first byte is all msb
-#second byte is all lsb
+   
     def check_tile_duplicate(data,reference_db):
         for k,ref in enumerate(reference_db):
             if (np.all(data == ref)):
@@ -139,6 +146,10 @@ def main(file,output_path='./'):
         tile_data_list = []
         tiles_added = 0
         dups = 0
+         #each tile 8x8 pixels: 64 pixel
+        #2 bytes per row, i.e. 16 bits, 2 bit per pixel
+        #first byte is all msb
+        #second byte is all lsb
         for i in np.arange(int(im.height/8)):
             for j in np.arange(int(im.width/8)):
                 px = j * 8 
@@ -269,12 +280,14 @@ if __name__ == "__main__":
     app_name = 'Pixelfall v{version} - Game Boy TileMaker and sequencer by {author}.'.format(version=__version__, author=__author__)
     parser = argparse.ArgumentParser(description=app_name)
     parser.add_argument('file_path', help='Gif file to process')
+    parser.add_argument('--palette-mode', help='Enable color cycling in 1..5 fashion or extend palette to solid 0..6', type=str, default='cycle', choices=['extend','cycle'])
     parser.add_argument('--output_path', help='Output path',type=str, default='./')
     parser.add_argument('--debug', help='Enable debug output', action='store_true')
+
 
     args = parser.parse_args()
 
     if (args.debug):
         DEBUG = True
 
-    main(args.file_path,args.output_path)
+    main(args.file_path,args.output_path,args.palette_mode)
