@@ -181,6 +181,7 @@ def main(file,output_path='./',pal_mode='cycle'):
                     map_data = np.append(map_data,res)
 
         print('{:d} dups found for {:d} tiles '.format(dups,int(im.height* im.width / 64)))
+
         tile_data = np.asarray(tile_data_list).astype('uint8').flatten()
         return tile_data,map_data
     
@@ -218,20 +219,20 @@ DB {tile_data:s}
     
     tile_len_total += len(tile_data)
     
-    palette_data_string= pal_byteready.tobytes().hex()
-    palette_data_string= '$' + ',$'.join(wrap(palette_data_string,2))
+    # palette_data_string= pal_byteready.tobytes().hex()
+    # palette_data_string= '$' + ',$'.join(wrap(palette_data_string,2))
     
+    def format_hexstring(data):
+        data_str = data.astype('uint8').tobytes().hex()
+        data_str = '$' + ',$'.join(wrap(data_str,2))
+        return data_str
+
     with open(output_path + base + '.inc','w') as f:
-        tile_data_string= tile_data.astype('uint8').tobytes().hex()
-        tile_data_string= '$' + ',$'.join(wrap(tile_data_string,2))
-        
-        map_data_string= map_data.astype('uint8').tobytes().hex()
-        map_data_string= '$' + ',$'.join(wrap(map_data_string,2))
         info = {
-        'palette_data': palette_data_string,
+        'palette_data': format_hexstring(pal_byteready),
         'palette_data_size': len(pal_byteready),
-        'map_data': map_data_string,
-        'tile_data': tile_data_string,
+        'map_data': format_hexstring(map_data),
+        'tile_data': format_hexstring(tile_data),
         'height': im.height,
         'width' : im.width,
          'map_width':  int(im.width/8),
@@ -250,16 +251,11 @@ DB {tile_data:s}
     tile_len_total += len(tile_data)
 
     with open(output_path + base +'.inc','a') as f:
-        tile_data_string= tile_data.astype('uint8').tobytes().hex()
-        tile_data_string= '$' + ',$'.join(wrap(tile_data_string,2))
-
-        map_data_string= map_data.astype('uint8').tobytes().hex()
-        map_data_string= '$' + ',$'.join(wrap(map_data_string,2))
         info = {
-        'palette_data': palette_data_string,
+        'palette_data': format_hexstring(pal_byteready),
         'palette_data_size': len(pal_byteready),
-        'map_data': map_data_string,
-        'tile_data': tile_data_string,
+        'map_data': format_hexstring(map_data),
+        'tile_data': format_hexstring(tile_data),
         'height': im.height,
         'width' : im.width,
          'map_width':  int(im.width/8),
